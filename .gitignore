@@ -26,3 +26,7 @@
 *.exe
 *.out
 *.app
+Game 
+
+# Reinclude
+!AIDummy-Linux32bits.o
