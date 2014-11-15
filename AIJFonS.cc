@@ -29,60 +29,87 @@ struct PLAYER_NAME: public Player {
 		return new PLAYER_NAME;
 	}
 
+	void log(string s) {cerr << "JFLog: " << s << endl; }
+
 	/**
 	 * Els atributs dels vostres jugadors es poden definir aquí.
 	 */
 	vector<ID> IDsoldats;
 	vector<ID> IDhelis;
 
+	Posicio id2p (ID i) { return Posicio(i/MAX,i%MAX); }
+	Posicio c2p (int x, int y) { return Posicio(x,y); }
+	ID p2id (Posicio p) { return p.x*MAX + p.y; }
+	ID c2id (int x, int y) { return x*MAX + y; }
+	bool valid_per_soldat(int id) {
+		Posicio p = id2p(id);
+		return (que(p.x,p.y) == GESPA or que(p.x,p.y) == BOSC);
+	}
+
 	int equip;
 	vector<int> enemics;
 	vector< vector<ID>> soldatsEnemics;
 	vector< vector<ID>> helisEnemics;
+	vector<Post> infoPosts;
+	vector<vector<int>> mapesSoldats;
 
-	Grup grupA, grupB;
 
 	void init() {
 		equip = qui_soc();
-		init_enemics();
-
-		grupA.pos = Posicio(2,2);
-		grupB.pos = Posicio(32,2);
-
+		infoPosts = posts();
 		IDsoldats = soldats(equip);
 		IDhelis = helis(equip);
+		init_enemics();
+		init_mapes();
+	}
+
+
+	void mapa_post(int primera_id, vector<int> & mapa) {
+		mapa = vector<int>(MAX*MAX);
+	    vector<bool> visitat = vector<bool>(MAX*MAX, false);
+	    queue<int> q;
+
+	    visitat[primera_id] = true;
+	    q.push(primera_id);
+	    mapa[primera_id] = primera_id;
+
+	    while(!q.empty()) {
+	    	int id = q.front();
+	    	Posicio pos = id2p(id);
+	        q.pop();
+	        for (int i = -1; i <= 1; ++i) {
+	        	for (int j = -1; j <= 1; ++j) {
+	        		int novaId = p2id(Posicio(pos.x + i, pos.y + j));
+	        		if (valid_per_soldat(novaId) and not visitat[novaId]){
+	        			visitat[novaId] = true;
+	        			q.push(novaId);
+	        			mapa[novaId] = id;
+	        		}
+	        	}
+	        }
+	    }
+	}
+
+	void init_mapes() {
+		int n = infoPosts.size();
+		mapesSoldats = vector<vector<int>>(n);
+		for (int i = 0; i < n; ++i) mapa_post(p2id(infoPosts[i].pos), mapesSoldats[i]);
 	}
 
 	void init_enemics() {
+		soldatsEnemics = vector< vector<ID>>(3);
+		helisEnemics = vector< vector<ID>>(3);
 		enemics = vector<int>(3);
 				int c = 0;
 				for (int i = 1; i < 5; ++i) {
 					if (i != equip) {
 						enemics[c] = i;
-						//soldatsEnemics[c] = soldats(i);
-						//helisEnemics[c] = helis(i);
+						soldatsEnemics[c] = soldats(i);
+						helisEnemics[c] = helis(i);
 						++c;
 					}
 				}
 		if (equip != 4)enemics[2] = 4;
-	}
-
-
-	void reubica_grup(Grup &g) {
-		int x = g.pos.x;
-		int y = g.pos.y;
-		for (int i = -2; i < 3; ++i) {
-			for (int j = -2; j < 3; ++j) {
-				if (quin_soldat(x + i, y + j) > 0) {
-					g.pos.x += x + i;
-					g.pos.y += y + j;
-					++g.n;
-				}
-			}
-		}
-		g.pos.x /= g.n;
-		g.pos.y /= g.n;
-		valid()
 	}
 
 	/**
@@ -93,15 +120,22 @@ struct PLAYER_NAME: public Player {
 	virtual void play() {
 		if (quin_torn() == 0)
 			init();
+
+		/*Info da = dades(IDsoldats[0]);
+		Posicio nextPos = id2p(mapesSoldats[0][p2id(da.pos)]);
+		ordena_soldat(IDsoldats[0], nextPos.x, nextPos.y);*/
+
+
 		for (int i = 0; i < IDsoldats.size(); ++i) {
 			Info da = dades(IDsoldats[i]);
-			ordena_soldat(IDsoldats[i], da.pos.x + 1, da.pos.y + 1);
+			Posicio nextPos = id2p(mapesSoldats[i%mapesSoldats.size()][p2id(da.pos)]);
+			ordena_soldat(IDsoldats[i], nextPos.x, nextPos.y);
 		}
-		for (int i = 0; i < IDhelis.size(); ++i) {
+		/*for (int i = 0; i < IDhelis.size(); ++i) {
 			Info da = dades(IDhelis[i]);
 			ordena_helicopter(IDhelis[i], NAPALM);
 
-		}
+		}*/
 	}
 
 };

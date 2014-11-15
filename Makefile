@@ -72,12 +72,16 @@ doxygen:
 	doxygen
 	cd latex && make
 	cp latex/refman.pdf .
-
-DummyTest:
-	./Game $(MY_AI) Dummy Dummy Dummy < default.cnf > default.res
+launch:
 	$(CHROME) --args -allow-file-access-from-files %U "file://$(PWD)/Viewer/viewer.html?start=yes&game=file://$(PWD)/default.res" &
 
-FullDummy:
+dummyTest:
+	./Game $(MY_AI) Dummy Dummy Dummy < default.cnf > default.res 2> out.txt
+
+nullTest:
+	./Game $(MY_AI) Null Null Null < default.cnf > default.res 2> out.txt
+
+fullDummy:
 	make Game
 	make DummyTest
 include Makefile.deps

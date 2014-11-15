@@ -540,16 +540,6 @@ function preloadImages () {
 
     data.img.heli[1][3] = new Image();
     data.img.heli[1][3].src = "img/helicopter.+.FFD700.png";
-	
-	data.img.player = new Array();
-	
-    data.img.player[0] = "img/player.blu.png";
-
-    data.img.player[1] = "img/player.bla.png";
-
-    data.img.player[2] = "img/player.red.png";
-
-    data.img.player[3] = "img/player.yel.png";
 }
 
 
@@ -596,7 +586,7 @@ function writeGameState () {
 	scoreboard += "<br/><br/>";
     for (var i = 0; i < data.nb_players; i++) {
         scoreboard += "<span class='score'>"
-            + "<div style='display:inline-block; margin-top: 5px; width:47px; height:47px; background-image: url(\""+data.img.player[i]+"\");'></div>"
+            + "<div style='display:inline-block; margin-top: 5px; width:20px; height:20px; background-color:"+ player_colors[i] +"'></div>"
             + "<div style='display:inline-block; vertical-align: middle; margin-bottom: 7px; margin-left:8px;'>"+data.names[i]+"</div>"
             + "<br/>"
             + "<div style='margin-left: 10px;'>"
