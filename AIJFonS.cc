@@ -18,7 +18,6 @@ const int DEFENSA = 1;
 const int ATAC = 2;
 const int TRANSPORT = 3;
 
-
 const int nHelis = 2;
 const int nMapa = MAX * MAX;
 
@@ -37,12 +36,34 @@ struct PLAYER_NAME: public Player {
 	/**
 	 * Structs
 	 */
-	struct Soldat {
+	struct SoldatInfo: Board {
 		ID id;
-		ID post;
+		ID post = -1;
 		int mode = MOVIMENT;
-		Info dades;
+		Info da;
+
+		SoldatInfo() {
+			id = -1;
+			da = Info();
+			post = -1;
+			mode = MOVIMENT;
+		}
+
+		SoldatInfo(ID i) {
+			id = i;
+			da = Info();
+			post = -1;
+			mode = MOVIMENT;
+		}
+
+		/*void update() {
+			da = dades(id);
+			if (da.id == -1)
+				id = -1;
+		}*/
 	};
+
+	typedef pair<ID, SoldatInfo> Soldat;
 
 	/**
 	 * Els atributs dels vostres jugadors es poden definir aquí.
@@ -76,13 +97,13 @@ struct PLAYER_NAME: public Player {
 	vector<ID> IDsoldats, IDhelis;
 	int nSoldats;
 
-	map<ID, Soldat> infoSoldats;
+	map<ID, SoldatInfo> infoSoldats;
+	vector<Post> infoPosts;
+	int nPosts;
 
 	vector<int> enemics;
 	vector<vector<ID>> soldatsEnemics;
 	vector<vector<ID>> helisEnemics;
-	vector<Post> infoPosts;
-	int nPosts;
 
 	vector<vector<int>> mapesSoldats;
 	vector<vector<int>> distanciesSoldats;
@@ -93,35 +114,76 @@ struct PLAYER_NAME: public Player {
 	 * Dades
 	 */
 	void init() {
-		equip = qui_soc();
+		infoSoldats = map<ID,SoldatInfo>();
 		soldatsEnemics = vector<vector<ID>>(3);
 		helisEnemics = vector<vector<ID>>(3);
-		update();
+		infoPosts = posts();
 		nPosts = infoPosts.size();
+		equip = qui_soc();
+		init_enemics();
+		update();
 		init_mapes();
 	}
 
-	void update() {
-		infoPosts = posts();
-		IDsoldats = soldats(equip);
-		IDhelis = helis(equip);
-		nSoldats = IDsoldats.size();
-		update_enemics();
-	}
 
-	void update_enemics() {
+	void init_enemics() {
 		enemics = vector<int>(3);
 		int c = 0;
 		for (int i = 1; i < 5; ++i) {
 			if (i != equip) {
 				enemics[c] = i;
-				soldatsEnemics[c] = soldats(i);
-				helisEnemics[c] = helis(i);
 				++c;
 			}
 		}
 		if (equip != 4)
 			enemics[2] = 4;
+	}
+
+	void update() {
+		infoPosts = posts();
+		IDhelis = helis(equip);
+		IDsoldats = soldats(equip);
+		nSoldats = IDsoldats.size();
+		update_enemics();
+		update_info_soldats();
+	}
+
+	void update_info_soldats() {
+		for (int i = 0; i < nSoldats; ++i) {
+			ID id = IDsoldats[i];
+			if (infoSoldats.count(id) == 0) {
+				Soldat s = Soldat(id,SoldatInfo(id));
+				init_soldat(s);
+				infoSoldats.insert(s);
+			} else {
+				infoSoldats[id].da = dades(id);
+				if (infoSoldats[id].id == -1) {
+					infoSoldats.erase(id);
+				}
+			}
+		}
+	}
+
+	void update_enemics() {
+		for (int i = 0; i < 3; ++i) {
+			soldatsEnemics[i] = soldats(enemics[i]);
+			helisEnemics[i] = helis(enemics[i]);
+		}
+	}
+
+	/**
+	 *  Control
+	 */
+	void init_soldat(Soldat &s) {
+		s.second.post = uniforme(0,nPosts-1);
+		s.second.da = dades(s.second.id);
+	}
+
+	void mou_soldat(const SoldatInfo &s) {
+		switch(s.mode) {
+		case MOVIMENT:
+			//TODO
+		}
 	}
 
 	/**
@@ -151,7 +213,7 @@ struct PLAYER_NAME: public Player {
 
 	void visitar_posicio_mapa_helis(int instruccio, int id,
 			vector<bool> & visitat, vector<int> & mapa, queue<int> &q) {
-		if (not visitat[id] and validHelis[id%nMapa]) {
+		if (not visitat[id] and validHelis[id % nMapa]) {
 			visitat[id] = true;
 			q.push(id);
 			mapa[id] = instruccio;
@@ -177,17 +239,19 @@ struct PLAYER_NAME: public Player {
 
 			Posicio p = Posicio(pos.x + dx[o], pos.y + dy[o]);
 			if (valid(p))
-				visitar_posicio_mapa_helis(AVANCA1, po2id(p, o), visitat, mapa, q);
+				visitar_posicio_mapa_helis(AVANCA1, po2id(p, o), visitat, mapa,
+						q);
 
 			p = Posicio(p.x + dx[o], p.y + dy[o]);
 			if (valid(p))
-				visitar_posicio_mapa_helis(AVANCA2, po2id(p, o), visitat, mapa, q);
+				visitar_posicio_mapa_helis(AVANCA2, po2id(p, o), visitat, mapa,
+						q);
 
 			visitar_posicio_mapa_helis(RELLOTGE, po2id(pos, (o + 1) % 4),
 					visitat, mapa, q);
 
-			visitar_posicio_mapa_helis(CONTRA_RELLOTGE, po2id(pos, (o - 1 + 4) % 4),
-					visitat, mapa, q);
+			visitar_posicio_mapa_helis(CONTRA_RELLOTGE,
+					po2id(pos, (o - 1 + 4) % 4), visitat, mapa, q);
 
 		}
 	}
@@ -236,13 +300,6 @@ struct PLAYER_NAME: public Player {
 					distanciesSoldats[i]);
 			mapa_post_helis(p2id(infoPosts[i].pos), mapesHelis[i]);
 		}
-
-		for (int i = 0; i < MAX; ++i) {
-			for (int j = 0; j < MAX; ++j) {
-				cerr << validHelis[c2id(i, j)] << " ";
-			}
-			cerr << endl;
-		}
 	}
 
 	/**
@@ -256,20 +313,24 @@ struct PLAYER_NAME: public Player {
 		else
 			update();
 
-		for (int i = 0; i < nSoldats; ++i) {
-			Info da = dades(IDsoldats[i]);
-			Posicio nextPos = id2p(mapesSoldats[i%nPosts][p2id(da.pos)]);
-			ordena_soldat(IDsoldats[i], nextPos.x, nextPos.y);
+		for (auto& p:infoSoldats) {
+			SoldatInfo s = p.second;
+			Posicio nextPos = id2p(mapesSoldats[s.post][p2id(s.da.pos)]);
+			ordena_soldat(s.id, nextPos.x, nextPos.y);
 		}
 
-		Info da = dades(IDhelis[0]);
-		ordena_helicopter(IDhelis[0], mapesHelis[7][po2id(da.pos,da.orientacio)]);
-		da = dades(IDhelis[1]);
-				ordena_helicopter(IDhelis[1], mapesHelis[15][po2id(da.pos,da.orientacio)]);
-		/*for (int i = 0; i < nHelis; ++i) {
-			Info da = dades(IDhelis[i]);
-			ordena_helicopter(IDhelis[i], mapesHelis[i][po2id(da.pos,da.orientacio)]);
+		/*for (int i = 0; i < nSoldats; ++i) {
+			Info da = dades(IDsoldats[i]);
+			Posicio nextPos = id2p(mapesSoldats[i % nPosts][p2id(da.pos)]);
+			ordena_soldat(IDsoldats[i], nextPos.x, nextPos.y);
 		}*/
+
+		Info da = dades(IDhelis[0]);
+		ordena_helicopter(IDhelis[0],
+				mapesHelis[7][po2id(da.pos, da.orientacio)]);
+		da = dades(IDhelis[1]);
+		ordena_helicopter(IDhelis[1],
+				mapesHelis[15][po2id(da.pos, da.orientacio)]);
 	}
 
 }
