@@ -26,7 +26,10 @@
 *.exe
 *.out
 *.app
+
 Game 
+default.res
+out.txt
 
 # Reinclude
 !AIDummy-Linux32bits.o

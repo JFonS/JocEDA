@@ -43,8 +43,7 @@ LDFLAGS  = -std=c++0x -lm $(ARCHFLAGS) $(PROFILEFLAGS) $(DEBUGFLAGS) -O$(strip $
 
 # Rules
 
-#all: Game  
-all: FullDummy
+all: Game  
 
 clean:
 	mv $(DUMMY_OBJ) $(DUMMY_OBJ).keep
@@ -80,8 +79,10 @@ dummyTest:
 
 nullTest:
 	./Game $(MY_AI) Null Null Null < default.cnf > default.res 2> out.txt
+fullNull:
+	make 
+	make nullTest
+	make launch
 
-fullDummy:
-	make Game
-	make DummyTest
+
 include Makefile.deps
