@@ -83,6 +83,11 @@ fullNull:
 	make 
 	make nullTest
 	make launch
-
-
+fullDummy:
+	make
+	make dummyTest
+	make launch
+jfonsTest:
+	make
+	./Game $(MY_AI) $(MY_AI) $(MY_AI) $(MY_AI) < default.cnf > default.res 2> out.txt
 include Makefile.deps
