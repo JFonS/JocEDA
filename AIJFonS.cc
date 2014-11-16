@@ -38,9 +38,8 @@ struct PLAYER_NAME: public Player {
 	 * Structs
 	 */
 	struct SoldatInfo {
-		ID id;
-		ID post = -1;
-		int mode = MOVIMENT;
+		ID id, post;
+		int mode;
 		Info da;
 
 		SoldatInfo() {
