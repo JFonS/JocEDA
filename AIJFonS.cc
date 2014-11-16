@@ -89,6 +89,9 @@ struct PLAYER_NAME: public Player {
 	vector<vector<int>> mapesHelis;
 	vector<bool> validHelis;
 
+	/**
+	 * Dades
+	 */
 	void init() {
 		equip = qui_soc();
 		soldatsEnemics = vector<vector<ID>>(3);
