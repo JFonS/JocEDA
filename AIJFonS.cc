@@ -239,23 +239,15 @@ struct PLAYER_NAME: public Player {
     while (itr != infoSoldats.end()) {
       ID id = itr->first;
       if (not soldat_viu(id)) {
+		cerr << id << " just died" << endl;
+		--infoPosts[itr->second.post].n;
         infoSoldats.erase(itr++);
       } else {
+		cerr << id << " we copy you" << endl;
         itr->second.da = dades(id);
         ++itr;
       }
     }
-    /*for (auto& p : infoSoldats) {
-      ID id = p.first;
-      cerr << id << endl;
-      if (not soldat_viu(id)) {
-        cerr << id << " died" << endl;
-        infoSoldats.erase(id);
-      } else {
-        cerr << id << " we copy you" << endl;
-        infoSoldats[id].da = dades(id);
-      }
-    }*/
 
     for (auto& id : IDsoldats) {
       cerr << "before count" << endl;
@@ -380,7 +372,7 @@ struct PLAYER_NAME: public Player {
    */
 
   void init_soldat(Soldat &s) {
-    int soldatsPerPost = nSoldats / nPosts;
+    /*int soldatsPerPost = nSoldats / nPosts;
     int soldatsPerPostAlt = soldatsPerPost + ceil((float) (nSoldats % nPosts) / (float) nPostsAlts);
     for (int i = 0; i < nPosts; ++i) {
       if (infoPosts[i].n < soldatsPerPost or (infoPosts[i].da.valor == VALOR_ALT and infoPosts[i].n < soldatsPerPostAlt)) {
@@ -388,7 +380,11 @@ struct PLAYER_NAME: public Player {
         s.second.post = infoPosts[i].id;
         break;
       }
-    }
+    }*/
+	for (auto& post:infoPosts) {
+
+	}
+	if (s.second.post == -1) s.second.post = mrand.uniforme(0,nPosts - 1); 
     s.second.da = dades(s.second.id);
   }
 
@@ -412,7 +408,7 @@ struct PLAYER_NAME: public Player {
     switch (s.mode) {
     case MOVIMENT:
       log("moviment");
-      cerr << s.post << endl;
+      cerr << s.id << " towards " << s.post << endl;
       nextPos = id2p(mapesSoldats[s.post][p2id(s.da.pos)]);
       log("1");
       ID nextSoldat = quin_soldat(nextPos.x, nextPos.y);
