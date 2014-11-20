@@ -91,3 +91,4 @@ jfonsTest:
 	make
 	./Game $(MY_AI) $(MY_AI) $(MY_AI) $(MY_AI) < default.cnf > default.res 2> out.txt
 include Makefile.deps
+

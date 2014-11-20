@@ -320,7 +320,7 @@ private:
   double foo;
 
 
-  double& status(int e);
+  double& statusPriv(int e);
 
   bool es_jugador();
 
@@ -476,11 +476,8 @@ inline double Board::status(int e) const {
   return status_[e-1];
 }
 
-inline double& Board::status(int e) {
-  if (e < 1 or e > 4) {
-    error("status invocat amb " + i2s(e));
-    return foo;
-  }
+inline double& Board::statusPriv(int e) {
+  assert(1 <= e and e <= 4);
   return status_[e-1];
 }
 
