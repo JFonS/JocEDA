@@ -79,7 +79,7 @@ dummyTest:
 
 nullTest:
 	./Game $(MY_AI) Null Null Null < default.cnf > default.res 2> out.txt
-fullNull:
+fullNulli:
 	make 
 	make nullTest
 	make launch
@@ -87,6 +87,8 @@ fullDummy:
 	make
 	make dummyTest
 	make launch
+resultDummy:
+	./Game $(MY_AI) Dummy Dummy Dummy < default.cnf > default.res
 jfonsTest:
 	make
 	./Game $(MY_AI) $(MY_AI) $(MY_AI) $(MY_AI) < default.cnf > default.res 2> out.txt

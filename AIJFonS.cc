@@ -78,6 +78,7 @@ struct PLAYER_NAME: public Player {
 		Posicio target;
 		int post;
 		int mode;
+		int index;
 		bool meitatNord;
 
 		HeliInfo() {
@@ -86,6 +87,7 @@ struct PLAYER_NAME: public Player {
 			target = Posicio(-1, -1);
 			meitatNord = false;
 			mode = TRANSPORT;
+			index = -1;
 		}
 	};
 
@@ -127,6 +129,9 @@ struct PLAYER_NAME: public Player {
 		}
 		return false;
 	}
+	int randomPost() {
+		return mrand.uniforme(0, nPosts - 1);
+	}
 
 	int equip;
 	vector<ID> IDsoldats, IDhelis;
@@ -145,7 +150,7 @@ struct PLAYER_NAME: public Player {
 	vector<vector<int>> mapesSoldats;
 	vector<vector<int>> distanciesSoldats;
 	vector<vector<int>> mapesHelis;
-	vector<bool> validHelis;
+	vector<vector<bool>> validHeli;
 
 	/**
 	 * Dades
@@ -169,15 +174,20 @@ struct PLAYER_NAME: public Player {
 		infoHelis[1].id = IDhelis[1];
 		infoHelis[0].meitatNord = true;
 
-		int r = mrand.uniforme(0, nPosts - 1);
+		int r = randomPost();
 		while (infoPosts[r].da.valor != VALOR_ALT)
-			r = mrand.uniforme(0, nPosts - 1);
+			r = randomPost();
 		infoHelis[0].post = r;
+		infoHelis[0].target = infoPosts[r].da.pos;
 
-		int s = mrand.uniforme(0, nPosts - 1);
+		int s = randomPost();
 		while (infoPosts[s].da.valor != VALOR_ALT or r == s)
-			s = mrand.uniforme(0, nPosts - 1);
+			s = randomPost();
 		infoHelis[1].post = s;
+		infoHelis[1].target = infoPosts[s].da.pos;
+
+		infoHelis[0].index = 0;
+		infoHelis[1].index = 1;
 	}
 
 	void init_enemics() {
@@ -213,11 +223,9 @@ struct PLAYER_NAME: public Player {
 
 		mapesHelis = vector<vector<int>>(nPosts);
 
-		mapa_helis(validHelis);
+		mapa_helis(validHeli);
 		for (int i = 0; i < nPosts; ++i) {
-			mapa_post(p2id(infoPosts[i].da.pos), mapesSoldats[i],
-					distanciesSoldats[i]);
-			mapa_post_helis(p2id(infoPosts[i].da.pos), mapesHelis[i]);
+			mapa_post(p2id(infoPosts[i].da.pos), mapesSoldats[i], distanciesSoldats[i]);
 		}
 	}
 
@@ -225,6 +233,7 @@ struct PLAYER_NAME: public Player {
 		IDhelis = helis(equip);
 		IDsoldats = soldats(equip);
 		nSoldats = IDsoldats.size();
+		mapa_helis(validHeli);
 		update_posts();
 		update_enemics();
 		update_info_soldats();
@@ -243,22 +252,18 @@ struct PLAYER_NAME: public Player {
 		while (itr != infoSoldats.end()) {
 			ID id = itr->first;
 			if (not soldat_viu(id)) {
-				cerr << id << " just died" << endl;
 				--infoPosts[itr->second.post].n;
 				infoSoldats.erase(itr++);
 			} else {
-				cerr << id << " we copy you" << endl;
 				itr->second.da = dades(id);
 				++itr;
 			}
 		}
 
 		for (auto& id : IDsoldats) {
-			cerr << "before count" << endl;
 			if (infoSoldats.count(id) == 0) {
-				cerr << id << " just enroled!" << endl;
 				Soldat s = Soldat(id, SoldatInfo(id));
-				init_soldat(s);
+				init_soldat(s.second);
 				infoSoldats.insert(s);
 			}
 		}
@@ -281,19 +286,22 @@ struct PLAYER_NAME: public Player {
 	/**
 	 * Mapes
 	 */
-	void mapa_helis(vector<bool> & mapa) {
-		mapa = vector<bool>(nMapa, true);
+
+	void mapa_helis(vector<vector<bool>> & mapa) {
+		mapa = vector<vector<bool>>(2, vector<bool>(nMapa, true));
+
 		for (int i = 0; i < MAX; ++i) {
 			for (int j = 0; j < MAX; ++j) {
-				if (que(i, j) == MUNTANYA)
-					mapa[c2id(i, j)] = false;
-				else {
+				if (que(i, j) == MUNTANYA) {
+					mapa[0][c2id(i, j)] = false;
+					mapa[1][c2id(i, j)] = false;
+				} else {
 					bool trobat = false;
 					for (int k = -2; k <= 2 and not trobat; ++k) {
 						for (int l = -2; l <= 2 and not trobat; ++l) {
-							if (valid(i + k, j + l)
-									and que(i + k, j + l) == MUNTANYA) {
-								mapa[c2id(i, j)] = false;
+							if (valid(i + k, j + l) and que(i + k, j + l) == MUNTANYA) {
+								mapa[0][c2id(i, j)] = false;
+								mapa[1][c2id(i, j)] = false;
 								trobat = true;
 							}
 						}
@@ -301,11 +309,27 @@ struct PLAYER_NAME: public Player {
 				}
 			}
 		}
+
+		for (int i = 1; i <= 4; ++i) {
+			vector<int> h = helis(i);
+			for (int j = 0; j < h.size(); ++j) {
+				Info ih = dades(h[j]);
+				for (int k = -4; k <= 4; ++k) {
+					for (int l = -4; l <= 4; ++l) {
+						if (valid(ih.pos.x + k, ih.pos.y + l)) {
+							if (ih.id != IDhelis[0])
+								mapa[0][c2id(ih.pos.x + k, ih.pos.y + l)] = false;
+							if (ih.id != IDhelis[1])
+								mapa[1][c2id(ih.pos.x + k, ih.pos.y + l)] = false;
+						}
+					}
+				}
+			}
+		}
 	}
 
-	void visitar_posicio_mapa_helis(int instruccio, int id,
-			vector<bool> & visitat, vector<int> & mapa, queue<int> &q) {
-		if (not visitat[id] and validHelis[id % nMapa]) {
+	void visitar_posicio_mapa_helis(int hId, int instruccio, int id, vector<bool> & visitat, vector<int> & mapa, queue<int> &q) {
+		if (not visitat[id] and validHeli[hId][id % nMapa]) {
 			visitat[id] = true;
 			q.push(id);
 			mapa[id] = instruccio;
@@ -313,43 +337,7 @@ struct PLAYER_NAME: public Player {
 
 	}
 
-	void mapa_post_helis(int post, vector<int> & mapa) {
-		int dx[4] = { -1, 0, 1, 0 };
-		int dy[4] = { 0, -1, 0, 1 };
-		mapa = vector<int>(nMapa * 4);
-		vector<bool> visitat = vector<bool>(nMapa * 4, false);
-		queue<int> q;
-		visitat[post] = true;
-		q.push(post);
-		mapa[post] = post;
-
-		while (!q.empty()) {
-			int id = q.front();
-			Posicio pos = id2p(id);
-			int o = id2o(id);
-			q.pop();
-
-			Posicio p = Posicio(pos.x + dx[o], pos.y + dy[o]);
-			if (valid(p))
-				visitar_posicio_mapa_helis(AVANCA1, po2id(p, o), visitat, mapa,
-						q);
-
-			p = Posicio(p.x + dx[o], p.y + dy[o]);
-			if (valid(p))
-				visitar_posicio_mapa_helis(AVANCA2, po2id(p, o), visitat, mapa,
-						q);
-
-			visitar_posicio_mapa_helis(RELLOTGE, po2id(pos, (o + 1) % 4),
-					visitat, mapa, q);
-
-			visitar_posicio_mapa_helis(CONTRA_RELLOTGE,
-					po2id(pos, (o - 1 + 4) % 4), visitat, mapa, q);
-
-		}
-	}
-
-	void mapa_post(int primera_id, vector<int> & mapa,
-			vector<int> & distancia) {
+	void mapa_post(int primera_id, vector<int> & mapa, vector<int> & distancia) {
 		mapa = vector<int>(nMapa);
 		distancia = vector<int>(nMapa);
 		vector<bool> visitat = vector<bool>(nMapa, false);
@@ -381,83 +369,91 @@ struct PLAYER_NAME: public Player {
 	/**
 	 *  Control
 	 */
-	void init_soldat(Soldat &s) {
-		s.second.da = dades(s.second.id);
+	void init_soldat(SoldatInfo &s) {
+		s.da = dades(s.id);
 		typedef pair<int, int> P;
-		priority_queue<P, vector<P>, greater<P> > q = priority_queue<P,
-				vector<P>, greater<P> >();
+		priority_queue<P, vector<P>, greater<P> > q = priority_queue<P, vector<P>, greater<P> >();
 
 		for (int i = 0; i < nPosts; ++i) {
 			PostInfo post = infoPosts[i];
-			cerr << post.id << " -> " << post.n << "     "
-					<< distanciesSoldats[post.id][p2id(s.second.da.pos)]
-					<< endl;
-			q.push(
-					pair<int, int>(
-							distanciesSoldats[post.id][p2id(s.second.da.pos)],
-							post.id));
+			//cerr << post.id << " -> " << post.n << "     " << distanciesSoldats[post.id][p2id(s.da.pos)] << endl;
+			q.push(pair<int, int>(distanciesSoldats[post.id][p2id(s.da.pos)], post.id));
 		}
 
 		int mesProper = q.top().second;
-		while (infoPosts[q.top().second].n >= 2 and not q.empty())
-			q.pop();
-		if (not q.empty())
-			mesProper = q.top().second;
-		s.second.post = mesProper;
+		if (quin_torn() == 0 or infoPosts[mesProper].da.equip == equip) {
+			while (infoPosts[q.top().second].n >= 2 and not q.empty())
+				q.pop();
+			if (not q.empty())
+				mesProper = q.top().second;
+		}
+		s.post = mesProper;
 		++infoPosts[mesProper].n;
+	}
+
+	int preferencia_moviment(SoldatInfo &s, int x, int y) { //Retorna la prioritat de la casella x, y
+		logPos("", c2p(x, y));
+		if (temps_foc(x, y) > 0)
+			return 0;
+		if (quin_soldat(x, y) > 0) {
+			log("Soldat trobat");
+			ID id = quin_soldat(x, y);
+			if (id > 0 and dades(id).equip != equip) {
+				log("Enemic");
+				return 4;
+			} else {
+				log("Aliat");
+				return mrand.uniforme(0, 1);
+			}
+		}
+		if (de_qui_post(x, y) == -1 or (de_qui_post(x, y) > 0 and not de_qui_post(x, y) == equip))
+			return 3;
+
+		Posicio cami = id2p(mapesSoldats[s.post][p2id(s.da.pos)]);
+		if (cami.x == x and cami.y == y)
+			return 2;
+		if (valid_per_soldat(c2id(x, y)))
+			return 1;
+		return 0;
 	}
 
 	void logica_soldat(SoldatInfo &s) {
 
 		int maxPrioritat = -99999;
-		int maxi = 0, maxj = 0;
 		Posicio pos = s.da.pos;
 		Posicio cami = id2p(mapesSoldats[s.post][p2id(s.da.pos)]);
-		//prioritats[cami.x - p.x + 1][cami.y - p.y + 1] = 2;
+		logPos("at", pos);
+
 		for (int i = -1; i <= 1; ++i) {
 			for (int j = -1; j <= 1; ++j) {
-				int prioritat = 0;
-				Posicio p = Posicio(pos.x+i,pos.y+j);
-				if (temps_foc(p.x, p.y) > 0) {
-					prioritat -= 999;
-				}
-				int quiPost = de_qui_post(p.x, p.y);
-				if (quiPost > 0 and quiPost != equip) {
-					prioritat += 5;
-				}
-				Info q = (quin_soldat(p.x,p.y) > 0) ? dades(quin_soldat(p.x,p.y)) : Info();
-				if (q.id != -1) {
-					if (q.equip == equip) {
-						prioritat -= 5;
-					} else {
-						if (valid(p) and que(p.x, p.y) == BOSC) {
-							prioritat -= 5;
-						} else {
-							prioritat += 10;
-						}
+				if (i != 0 or j != 0) {
+					Posicio p = Posicio(pos.x + i, pos.y + j);
+					int prioritat = preferencia_moviment(s, p.x, p.y);
+					if (prioritat > maxPrioritat) {
+						maxPrioritat = prioritat;
+						s.nextMove = p;
 					}
-				}
-				if (cami.x == p.x and cami.y == p.y) {
-					prioritat += 3;
-				}
-				if (prioritat > maxPrioritat) {
-					cerr << s.id << "  p: " << prioritat << endl;
-					maxi = i;
-					maxj = j;
-					maxPrioritat = prioritat;
 				}
 			}
 		}
-		s.nextMove = Posicio(pos.x + maxi, pos.y + maxj);
-		logPos(s.nextMove);
+
+		logPos("nextmove:", s.nextMove);
 	}
 
 	void logica_heli(HeliInfo & h) {
-		if (h.target.x == -1)
-			h.target = Posicio(36, 40);
+		if (not validHeli[h.index][p2id(h.target)]) {
+			int r = randomPost();
+			while (infoPosts[r].da.valor != VALOR_ALT or not validHeli[h.index][p2id(infoPosts[r].da.pos)])
+				r = randomPost();
+			h.post = r;
+			h.target = infoPosts[r].da.pos;
+		}
+
 		if (p2id(h.da.pos) == p2id(infoPosts[h.post].da.pos)) {
 			h.post = mrand.uniforme(0, nPosts - 1);
+			h.target = infoPosts[h.post].da.pos;
 		}
+
 		int enemics = 0;
 		for (int i = -2; i <= 2; ++i) {
 			for (int j = -2; j <= 2; ++j) {
@@ -471,69 +467,37 @@ struct PLAYER_NAME: public Player {
 			ordena_helicopter(h.id, NAPALM);
 
 		if (h.da.paraca.size() > 0) {
-			//for (auto& p : h.da.paraca) {
-			Posicio baixaPos = Posicio(h.da.pos.x + mrand.uniforme(-2, 2),
-					h.da.pos.y + mrand.uniforme(-2, 2));
-			if (temps_foc(baixaPos.x, baixaPos.y) == 0
-					and valid_per_soldat(p2id(baixaPos))) {
-				ordena_paracaigudista(baixaPos.x, baixaPos.y);
+			for (auto& p : h.da.paraca) {
+				Posicio baixaPos = Posicio(h.da.pos.x + mrand.uniforme(-2, 2), h.da.pos.y + mrand.uniforme(-2, 2));
+				if (temps_foc(baixaPos.x, baixaPos.y) == 0 and valid_per_soldat(p2id(baixaPos)) and quin_soldat(baixaPos.x, baixaPos.y) < 1) {
+					ordena_paracaigudista(baixaPos.x, baixaPos.y);
+				}
 			}
-			//}
 		}
 	}
 
 	void mou_soldat(const SoldatInfo &s) {
-		//Posicio nextPos;
-		/*switch (s.mode) {
-		 case MOVIMENT:
-
-		 nextPos = id2p(mapesSoldats[s.post][p2id(s.da.pos)]);
-
-		 ID nextSoldat = quin_soldat(nextPos.x, nextPos.y);
-		 if (nextSoldat > 0 and dades(nextSoldat).equip == equip) {
-		 int deltaX = nextPos.x - s.da.pos.x;
-		 int deltaY = nextPos.y - s.da.pos.y;
-
-		 deltaX = mrand.uniforme(0, 1) > 0 ? deltaX : -deltaX;
-		 deltaY = mrand.uniforme(0, 1) > 0 ? deltaY : -deltaY;
-		 nextPos = Posicio(s.da.pos.x + deltaX, s.da.pos.y + deltaY);
-		 }
-		 break;
-		 }
-
-		 for (int i = -1; i <= 1; ++i) {
-		 for (int j = -1; j <= 1; ++j) {
-		 ID id = quin_soldat(s.da.pos.x + i, s.da.pos.y + j);
-		 if (id > 0 and dades(id).equip != equip) {
-		 nextPos = Posicio(s.da.pos.x + i, s.da.pos.y + j);
-		 }
-		 }
-		 }*/
-
 		ordena_soldat(s.id, s.nextMove.x, s.nextMove.y);
 	}
 
-	bool visitar_posicio_bfs_helis(int instruccio, int id,
-			vector<bool> & visitat, queue<int> &q, int &inici) {
-		if (not visitat[id] and validHelis[id % nMapa]) {
+	bool visitar_posicio_bfs_helis(int hId, int instruccio, int id, vector<bool> & visitat, queue<int> &q, int &inici) {
+		if (not visitat[id] and validHeli[hId][id % nMapa]) {
 			visitat[id] = true;
 			q.push(id);
 			if (id == inici) {
-				cerr << "FOUND " << inici << endl;
 				return true;
 			}
 		}
 		return false;
 	}
 
-	int bfs_heli(Posicio posInici, int orientacioInici, Posicio posDesti) {
+	int bfs_heli(int hId, Posicio posInici, int orientacioInici, Posicio posDesti) {
 
 		int inici = po2id(posInici, orientacioInici);
 		int desti = p2id(posDesti);
 
 		int dx[4] = { -1, 0, 1, 0 };
 		int dy[4] = { 0, -1, 0, 1 };
-		cerr << "STRATING BFS FROM " << inici << " TO " << desti << endl;
 		vector<bool> visitat = vector<bool>(nMapa * 4, false);
 		queue<int> q;
 		visitat[desti] = true;
@@ -547,25 +511,21 @@ struct PLAYER_NAME: public Player {
 			q.pop();
 			Posicio p = Posicio(pos.x + dx[o], pos.y + dy[o]);
 			if (valid(p))
-				if (visitar_posicio_bfs_helis(AVANCA1, po2id(p, o), visitat, q,
-						inici)) {
+				if (visitar_posicio_bfs_helis(hId, AVANCA1, po2id(p, o), visitat, q, inici)) {
 					return AVANCA1;
 				}
 
 			p = Posicio(p.x + dx[o], p.y + dy[o]);
 			if (valid(p))
-				if (visitar_posicio_bfs_helis(AVANCA1, po2id(p, o), visitat, q,
-						inici)) {
+				if (visitar_posicio_bfs_helis(hId, AVANCA1, po2id(p, o), visitat, q, inici)) {
 					return AVANCA2;
 				}
 
-			if (visitar_posicio_bfs_helis(AVANCA1, po2id(pos, (o + 1) % 4),
-					visitat, q, inici)) {
+			if (visitar_posicio_bfs_helis(hId, AVANCA1, po2id(pos, (o + 1) % 4), visitat, q, inici)) {
 				return RELLOTGE;
 			}
 
-			if (visitar_posicio_bfs_helis(CONTRA_RELLOTGE,
-					po2id(pos, (o - 1 + 4) % 4), visitat, q, inici)) {
+			if (visitar_posicio_bfs_helis(hId, CONTRA_RELLOTGE, po2id(pos, (o - 1 + 4) % 4), visitat, q, inici)) {
 				return CONTRA_RELLOTGE;
 			}
 		}
@@ -573,16 +533,36 @@ struct PLAYER_NAME: public Player {
 	}
 
 	void mou_helicopter(const HeliInfo &h) {
-		//ordena_helicopter(h.id, mapesHelis[h.post][po2id(h.da.pos, h.da.orientacio)]);
-		ordena_helicopter(h.id, bfs_heli(h.da.pos, h.da.orientacio, h.target));
+
+		ordena_helicopter(h.id, bfs_heli(h.index, h.da.pos, h.da.orientacio, h.target));
+	}
+
+	void reassigna_soldats() {
+		map<ID,SoldatInfo>::iterator itA, itB;
+		for (itA = infoSoldats.begin(); itA != infoSoldats.end(); ++itA) {
+			SoldatInfo sA = itA->second;
+			for (itB = infoSoldats.begin(); itB != infoSoldats.end(); ++itB) {
+				SoldatInfo sB = itB->second;
+				if (sA.id != sB.id) {
+					int distActual = distanciesSoldats[sA.post][p2id(sA.da.pos)] + distanciesSoldats[sB.post][p2id(sB.da.pos)];
+					int distCanvi = distanciesSoldats[sA.post][p2id(sB.da.pos)] + distanciesSoldats[sB.post][p2id(sA.da.pos)];
+					if (distCanvi < distActual) {
+						int temp = itB->second.post;
+						itB->second.post = itA->second.post;
+						itA->second.post = temp;
+
+					}
+				}
+			}
+		}
 	}
 
 	void log(string s) {
-		cerr << s << endl;
+		//cerr << s << endl;
 	}
 
-	void logPos(Posicio p) {
-		cerr << "(" << p.x << "," << p.y << ")" << endl;
+	void logPos(string s, Posicio p) {
+		//cerr << s << "  (" << p.x << "," << p.y << ")" << endl;
 	}
 
 	/**
@@ -593,7 +573,10 @@ struct PLAYER_NAME: public Player {
 	virtual void play() {
 		if (quin_torn() == 0)
 			init();
+
 		update();
+		reassigna_soldats();
+
 		log("before soldiers");
 		for (auto& p : infoSoldats) {
 			logica_soldat(p.second);
