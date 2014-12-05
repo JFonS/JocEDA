@@ -1,3 +1,4 @@
+AIAIAIAI.o: AIAIAIAI.cc Player.hh Utils.hh Board.hh Action.hh Registry.hh
 AIDemo.o: AIDemo.cc Player.hh Utils.hh Board.hh Action.hh Registry.hh
 AIJFonS.o: AIJFonS.cc Player.hh Utils.hh Board.hh Action.hh Registry.hh
 AINull.o: AINull.cc Player.hh Utils.hh Board.hh Action.hh Registry.hh

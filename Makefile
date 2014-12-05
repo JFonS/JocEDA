@@ -1,6 +1,6 @@
 # Modifiqueu aquestes dues linies 
-MY_AI = JFonS #Nom de la vostre AI
-CHROME = /usr/bin/google-chrome-stable #Comanda del vostre navegador preferit
+MY_AI = AIAIAI #Nom de la vostre AI
+CHROME = chromium-browser #/usr/bin/google-chrome-stable #Comanda del vostre navegador preferit
 
 PWD = $(shell pwd)
 
